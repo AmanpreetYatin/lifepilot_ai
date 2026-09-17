@@ -2,35 +2,37 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lifepilot_ai/app/router/app_routes.dart';
 
 import '../../../../core/design_system/app_colors.dart';
 import '../providers/auth_provider.dart';
 
-class LoginScreen extends ConsumerStatefulWidget {
-  const LoginScreen({super.key});
+class RegisterScreen extends ConsumerStatefulWidget {
+  const RegisterScreen({super.key});
 
   @override
-  ConsumerState<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _LoginScreenState extends ConsumerState<LoginScreen> {
+class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
 
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
 
   bool _isLoading = false;
   bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
-  Future<void> _login() async {
+  Future<void> _register() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -44,13 +46,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     try {
       await ref
           .read(authRepositoryProvider)
-          .login(
+          .register(
             email: _emailController.text.trim(),
             password: _passwordController.text,
           );
 
       // Do not navigate manually.
-      // Firebase auth state changes and GoRouter handles the redirect.
+      // Firebase Auth state changes and GoRouter
+      // automatically redirects the user to /home.
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
 
@@ -81,25 +84,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   String _getAuthErrorMessage(FirebaseAuthException e) {
     switch (e.code) {
-      case 'invalid-credential':
-      case 'wrong-password':
-      case 'user-not-found':
-        return 'Incorrect email or password.';
+      case 'email-already-in-use':
+        return 'An account already exists with this email.';
 
       case 'invalid-email':
         return 'Please enter a valid email address.';
 
-      case 'user-disabled':
-        return 'This account has been disabled.';
+      case 'weak-password':
+        return 'Password is too weak. Use a stronger password.';
 
-      case 'too-many-requests':
-        return 'Too many attempts. Please try again later.';
+      case 'operation-not-allowed':
+        return 'Email/password registration is currently disabled.';
 
       case 'network-request-failed':
         return 'Network error. Check your internet connection.';
 
       default:
-        return e.message ?? 'Unable to sign in. Please try again.';
+        return e.message ?? 'Registration failed. Please try again.';
     }
   }
 
@@ -123,7 +124,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const SizedBox(height: 42),
 
                   Text(
-                    'Welcome back',
+                    'Create your account',
                     style: theme.textTheme.headlineMedium?.copyWith(
                       color: AppColors.textPrimary,
                       fontWeight: FontWeight.w800,
@@ -134,7 +135,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const SizedBox(height: 8),
 
                   const Text(
-                    'Sign in to continue your journey with LifePilot AI.',
+                    'Create your account and start your journey with LifePilot AI.',
                     style: TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 16,
@@ -144,11 +145,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                   const SizedBox(height: 30),
 
-                  _buildLoginCard(context),
+                  _buildRegisterCard(context),
 
                   const SizedBox(height: 28),
 
-                  _buildCreateAccount(context),
+                  _buildLoginPrompt(context),
 
                   const SizedBox(height: 30),
 
@@ -216,7 +217,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  Widget _buildLoginCard(BuildContext context) {
+  Widget _buildRegisterCard(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
@@ -242,26 +243,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
             _buildPasswordField(context),
 
-            const SizedBox(height: 8),
+            const SizedBox(height: 18),
 
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: _isLoading
-                    ? null
-                    : () {
-                        context.go(AppRoutes.forgotPassword);
-                      },
-                child: const Text('Forgot password?'),
-              ),
-            ),
+            _buildConfirmPasswordField(context),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: 24),
 
             SizedBox(
               height: 54,
               child: FilledButton(
-                onPressed: _isLoading ? null : _login,
+                onPressed: _isLoading ? null : _register,
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: AppColors.white,
@@ -285,7 +276,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            'Sign in',
+                            'Create account',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
@@ -308,7 +299,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       controller: _emailController,
       keyboardType: TextInputType.emailAddress,
       textInputAction: TextInputAction.next,
-      autofillHints: const [AutofillHints.username, AutofillHints.email],
+      autofillHints: const [AutofillHints.email],
       decoration: _inputDecoration(
         label: 'Email address',
         hint: 'you@example.com',
@@ -336,16 +327,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return TextFormField(
       controller: _passwordController,
       obscureText: _obscurePassword,
-      textInputAction: TextInputAction.done,
-      autofillHints: const [AutofillHints.password],
-      onFieldSubmitted: (_) {
-        if (!_isLoading) {
-          _login();
-        }
-      },
+      textInputAction: TextInputAction.next,
+      autofillHints: const [AutofillHints.newPassword],
       decoration: _inputDecoration(
         label: 'Password',
-        hint: 'Enter your password',
+        hint: 'Create a password',
         icon: Icons.lock_outline_rounded,
         suffixIcon: IconButton(
           tooltip: _obscurePassword ? 'Show password' : 'Hide password',
@@ -363,8 +349,58 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ),
       ),
       validator: (value) {
-        if (value == null || value.isEmpty) {
+        final password = value ?? '';
+
+        if (password.isEmpty) {
           return 'Password is required';
+        }
+
+        if (password.length < 6) {
+          return 'Password must be at least 6 characters';
+        }
+
+        return null;
+      },
+    );
+  }
+
+  Widget _buildConfirmPasswordField(BuildContext context) {
+    return TextFormField(
+      controller: _confirmPasswordController,
+      obscureText: _obscureConfirmPassword,
+      textInputAction: TextInputAction.done,
+      autofillHints: const [AutofillHints.newPassword],
+      onFieldSubmitted: (_) {
+        if (!_isLoading) {
+          _register();
+        }
+      },
+      decoration: _inputDecoration(
+        label: 'Confirm password',
+        hint: 'Re-enter your password',
+        icon: Icons.lock_outline_rounded,
+        suffixIcon: IconButton(
+          tooltip: _obscureConfirmPassword ? 'Show password' : 'Hide password',
+          onPressed: () {
+            setState(() {
+              _obscureConfirmPassword = !_obscureConfirmPassword;
+            });
+          },
+          icon: Icon(
+            _obscureConfirmPassword
+                ? Icons.visibility_outlined
+                : Icons.visibility_off_outlined,
+            color: AppColors.textSecondary,
+          ),
+        ),
+      ),
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Please confirm your password';
+        }
+
+        if (value != _passwordController.text) {
+          return 'Passwords do not match';
         }
 
         return null;
@@ -410,7 +446,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  Widget _buildCreateAccount(BuildContext context) {
+  Widget _buildLoginPrompt(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -427,10 +463,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               color: AppColors.white,
               shape: BoxShape.circle,
             ),
-            child: const Icon(
-              Icons.person_add_alt_1_rounded,
-              color: AppColors.primary,
-            ),
+            child: const Icon(Icons.login_rounded, color: AppColors.primary),
           ),
 
           const SizedBox(width: 14),
@@ -440,7 +473,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'New to LifePilot?',
+                  'Already have an account?',
                   style: TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 14,
@@ -449,7 +482,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
                 SizedBox(height: 3),
                 Text(
-                  'Create your free account',
+                  'Sign in to continue your journey',
                   style: TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 12,
@@ -463,11 +496,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             onPressed: _isLoading
                 ? null
                 : () {
-                    context.go(AppRoutes.register);
+                    context.go('/login');
                   },
             style: TextButton.styleFrom(foregroundColor: AppColors.primary),
             child: const Text(
-              'Get started',
+              'Sign in',
               style: TextStyle(fontWeight: FontWeight.w800),
             ),
           ),

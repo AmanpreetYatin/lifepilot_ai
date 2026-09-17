@@ -10,7 +10,7 @@ const onboardingItems = [
     'Manage your tasks, goals and daily schedule with an intelligent AI assistant.',
     image: 'assets/images/onboarding/onboarding_1.png',
     startColor: AppColors.primary,
-    endColor: AppColors.secondary,
+    endColor: AppColors.textSecondary,
   ),
   OnboardingItem(
     title: 'AI That\nWorks For You',

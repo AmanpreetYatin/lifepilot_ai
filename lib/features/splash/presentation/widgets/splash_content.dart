@@ -1,8 +1,8 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_routes.dart';
-import '../../../../core/design_system/app_colors.dart';
 import '../../../../core/widgets/animated_gradient_background.dart';
 import '../../../../core/widgets/brand_logo.dart';
 import '../../../../core/widgets/floating_blur_circle.dart';
@@ -17,7 +17,6 @@ class SplashContent extends StatefulWidget {
 
 class _SplashContentState extends State<SplashContent>
     with SingleTickerProviderStateMixin {
-
   late final AnimationController _controller;
 
   late final Animation<double> _fade;
@@ -33,20 +32,12 @@ class _SplashContentState extends State<SplashContent>
       duration: const Duration(milliseconds: 1800),
     );
 
-    _fade = CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOut,
-    );
+    _fade = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
 
     _scale = Tween(
       begin: .85,
       end: 1.0,
-    ).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: Curves.elasticOut,
-      ),
-    );
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.elasticOut));
 
     _controller.forward();
 
@@ -54,13 +45,16 @@ class _SplashContentState extends State<SplashContent>
   }
 
   Future<void> _navigate() async {
-    await Future.delayed(
-      const Duration(milliseconds: 2600),
-    );
+    await Future.delayed(const Duration(milliseconds: 2600));
 
     if (!mounted) return;
 
-    context.go(AppRoutes.onboarding);
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      context.go(AppRoutes.home);
+    } else {
+      context.go(AppRoutes.login);
+    }
   }
 
   @override
@@ -75,7 +69,6 @@ class _SplashContentState extends State<SplashContent>
     return AnimatedGradientBackground(
       child: Stack(
         children: [
-
           FloatingBlurCircle(
             size: 260,
             alignment: Alignment.topLeft,
@@ -100,10 +93,7 @@ class _SplashContentState extends State<SplashContent>
             child: Center(
               child: FadeTransition(
                 opacity: _fade,
-                child: ScaleTransition(
-                  scale: _scale,
-                  child: const BrandLogo(),
-                ),
+                child: ScaleTransition(scale: _scale, child: const BrandLogo()),
               ),
             ),
           ),
@@ -112,9 +102,7 @@ class _SplashContentState extends State<SplashContent>
             bottom: 60,
             left: 0,
             right: 0,
-            child: Center(
-              child: LoadingDots(),
-            ),
+            child: Center(child: LoadingDots()),
           ),
         ],
       ),

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "469991508388",
+    "project_id": "my-lifepilot",
+    "storage_bucket": "my-lifepilot.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:469991508388:android:a8efb4d0dc0594f8641931",
+        "android_client_info": {
+          "package_name": "com.example.lifepilot_ai"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD6WK7LDKb2pPAYDRKgumY8Ydht-DEuYQ8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
